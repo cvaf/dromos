@@ -5,3 +5,6 @@ To follow along, use the instructions in the [notebook](https://github.com/cvaf/
 
 Data was found on [NYC Open Data](https://data.cityofnewyork.us/Transportation/Elevation-points/szwg-xci6/data).
 
+The code output should display the path in the photo below:
+
+![Imgur](https://i.imgur.com/fvmruRA.png?1)
