@@ -1,8 +1,9 @@
 # Mac files
 .DS_Store
 
-# dataframes folder
-data/
+# NYC Open Data datasets
+data/ELEVATION.csv
+data/Centerline.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
