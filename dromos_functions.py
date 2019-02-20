@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from google_coords import coords_finder, ele_finder
 from math import pi, sin, cos, atan2
 from bokeh.io import output_file, output_notebook, show
 from bokeh.models import Line, GMapPlot, GMapOptions, ColumnDataSource, Circle, LogColorMapper, BasicTicker, ColorBar, Range1d, PanTool, WheelZoomTool, BoxSelectTool
@@ -10,6 +9,30 @@ import requests
 from scipy.spatial.distance import cdist
 
 
+def parse_thegeom(df):
+	"""
+	Function to parse out the longitude and latitude from the_geom variable from our dataframe.
+	Arguments:
+		- df: our dataframe
+	Returns:
+		- longitude, latitude: two vectors containing the coordinates from the_geom.
+	"""
+	if df.iloc[0].the_geom.split()[0] == 'POINT':
+		lon = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split()[0])
+		lat = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split()[1])
+
+		return pd.to_numeric(lon), pd.to_numeric(lat)
+
+	elif df.iloc[0].the_geom.split()[0] == 'MULTILINESTRING':
+		lat_f = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[0].split()[1])
+		lon_f = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[0].split()[0])
+		lat_l = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[-1].split()[1])
+		lon_l = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[-1].split()[0])
+
+		return pd.to_numeric(lat_f), pd.to_numeric(lon_f), pd.to_numeric(lat_l), pd.to_numeric(lon_l)
+
+
+
 def meters_dist(row):
     """
     Takes a row as input and outputs the distance between the two coordinates in meters.
@@ -17,10 +40,10 @@ def meters_dist(row):
         row: a row in our dataframe that consists two sets of coordinates.
     Returns: the distance in meters between the two sets of coordinates.
     """
-    lat1 = row['coords_first_x']
-    lon1 = row['coords_first_y']
-    lat2 = row['coords_last_x']
-    lon2 = row['coords_last_y']
+    lat1 = row['coords_first'][0]
+    lon1 = row['coords_first'][1]
+    lat2 = row['coords_last'][0]
+    lon2 = row['coords_last'][1]
     R = 6378.137
     dLat = lat2 * pi / 180 - lat1 * pi / 180
     dLon = lon2 * pi / 180 - lon1 * pi / 180
@@ -28,6 +51,31 @@ def meters_dist(row):
     c = 2 * atan2(np.sqrt(a), np.sqrt(1-a))
     d = R * c
     return d * 1000
+
+def closest_elevation(point, df_ele):
+    """
+    Given a point, this function finds the closest elevation from our elevation dataframe.
+    Arguments:
+        - point: a set of coordinates for which we are missing the elevation for
+        - df_ele: our elevation dataframe
+    Returns:
+        - an approximation of the elevation for that set of coordinates
+    """
+    points = list(df_ele['coords_first'])
+    ele = df_ele.loc[cdist([point], points).argmin(), 'elevation']
+    return ele
+
+def fill_elevations(coords, df_ele):
+    """
+    Function used to find the closest elevation for a list of observations with no elevation
+    Arguments:
+        - coords: our coordinates with missing elevations
+        - df_ele: our elevation dataframe
+    Returns: 
+        - elevations: a list of elevations for those data points
+    """
+    elevations = [closest_elevation(i, df_ele) for i in coords]
+    return elevations
 
 def closest_point(point, points):
     """ Find closest point from a list of points. 
@@ -92,6 +140,15 @@ def map_plot(df, api):
     return plot
 
 def d_graph(start, finish, df):
+	"""
+	Dijkstra's Algorithm - using DFS to find the shortest path between two sets of coordinates, given a metric
+	Arguments:
+		- start: our starting coordinates
+		- finish: our finish coordinates
+		- df: our dataframe with all the information
+	Returns:
+		- search_df: a dataframe outlying the shortest route
+	"""
 
     # figure out which way our route should be facing in order to narrow down our edges
     # latitude - wise
@@ -147,6 +204,12 @@ def d_graph(start, finish, df):
 
 
 def route_construction(graph_frame, beginning, finish):
+	"""
+	Function used to reformat the route dataframe constructed by our algorithm
+	Arguments:
+		- 
+	"""
+
     i = 0
     route_list = []
     route_list.append(finish)

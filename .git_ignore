@@ -1,7 +1,7 @@
 # Mac files
 .DS_Store
 
-# dataframes
+# dataframes folder
 data/
 
 # Byte-compiled / optimized / DLL files
