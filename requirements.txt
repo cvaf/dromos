@@ -27,7 +27,6 @@ numpy==1.16.1
 packaging==19.0
 pandas==0.24.1
 pandocfilters==1.4.2
-parso==0.3.4
 pickleshare==0.7.5
 Pillow==5.4.1
 prometheus-client==0.6.0
