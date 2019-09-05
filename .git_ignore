@@ -5,6 +5,9 @@
 data/ELEVATION.csv
 data/Centerline.csv
 
+# credentials
+credentials.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
