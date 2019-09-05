@@ -9,28 +9,34 @@ import requests
 from scipy.spatial.distance import cdist
 
 
-def parse_thegeom(df):
-	"""
-	Function to parse out the longitude and latitude from the_geom variable from our dataframe.
-	Arguments:
-		- df: our dataframe
-	Returns:
-		- longitude, latitude: two vectors containing the coordinates from the_geom.
-	"""
-	if df.iloc[0].the_geom.split()[0] == 'POINT':
-		lon = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split()[0])
-		lat = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split()[1])
+def point_parser(x, i):
+    return x.split('(')[-1].split(')')[0].split()[i]
 
-		return pd.to_numeric(lon), pd.to_numeric(lat)
+def multiline_parser(x, first, second):
+    return x.split('(')[-1].split(')')[0].split(',')[first].split()[second]
 
-	elif df.iloc[0].the_geom.split()[0] == 'MULTILINESTRING':
-		lat_f = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[0].split()[1])
-		lon_f = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[0].split()[0])
-		lat_l = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[-1].split()[1])
-		lon_l = df.the_geom.apply(lambda x: x.split('(')[-1].split(')')[0].split(',')[-1].split()[0])
+def coords_parser(coords):
+    """
+    Parse out the longitude and latitude from the_geom variable from our dataframe.
+    Arguments:
+        - coords: array of coordinates to parse out
+    Returns:
+        - longitude, latitude: two vectors containing the coordinates from the_geom.
+    """
+    coordinate_type = coords[0].split()[0]
 
-		return pd.to_numeric(lat_f), pd.to_numeric(lon_f), pd.to_numeric(lat_l), pd.to_numeric(lon_l)
+    if coordinate_type == 'POINT':
+        lon = coords.apply(point_parser, args=(0,))
+        lat = coords.apply(point_parser, args=(1,))
+        return pd.to_numeric(lon), pd.to_numeric(lat)
 
+    elif coordinate_type == 'MULTILINESTRING':
+        lat_f = coords.apply(multiline_parser, args=(0,1,))
+        lon_f = coords.apply(multiline_parser, args=(0,0,))
+        lat_l = coords.apply(multiline_parser, args=(-1,1,))
+        lon_l = coords.apply(multiline_parser, args=(-1,0,))
+
+        return pd.to_numeric(lat_f), pd.to_numeric(lon_f), pd.to_numeric(lat_l), pd.to_numeric(lon_l)
 
 
 def meters_dist(row):
@@ -51,6 +57,8 @@ def meters_dist(row):
     c = 2 * atan2(np.sqrt(a), np.sqrt(1-a))
     d = R * c
     return d * 1000
+
+
 
 def closest_elevation(point, df_ele):
     """
@@ -140,15 +148,15 @@ def map_plot(df, api):
     return plot
 
 def d_graph(start, finish, df):
-	"""
-	Dijkstra's Algorithm - using DFS to find the shortest path between two sets of coordinates, given a metric
-	Arguments:
-		- start: our starting coordinates
-		- finish: our finish coordinates
-		- df: our dataframe with all the information
-	Returns:
-		- search_df: a dataframe outlying the shortest route
-	"""
+    """
+    Dijkstra's Algorithm - using DFS to find the shortest path between two sets of coordinates, given a metric
+    Arguments:
+        - start: our starting coordinates
+        - finish: our finish coordinates
+        - df: our dataframe with all the information
+    Returns:
+        - search_df: a dataframe outlying the shortest route
+    """
 
     # figure out which way our route should be facing in order to narrow down our edges
     # latitude - wise
@@ -204,11 +212,11 @@ def d_graph(start, finish, df):
 
 
 def route_construction(graph_frame, beginning, finish):
-	"""
-	Function used to reformat the route dataframe constructed by our algorithm
-	Arguments:
-		- 
-	"""
+    """
+    Function used to reformat the route dataframe constructed by our algorithm
+    Arguments:
+        - 
+    """
 
     i = 0
     route_list = []
